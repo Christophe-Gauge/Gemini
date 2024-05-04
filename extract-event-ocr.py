@@ -16,6 +16,15 @@ origin = 'http://apps.videre.us'
 
 @functions_framework.http
 def hello_http(request):
+    """HTTP Cloud Function.
+    Args:
+        request (flask.Request): The request object.
+        <https://flask.palletsprojects.com/en/1.1.x/api/#incoming-request-data>
+    Returns:
+        The response text, or any set of values that can be turned into a
+        Response object using `make_response`
+        <https://flask.palletsprojects.com/en/1.1.x/api/#flask.make_response>.
+    """
     if request.method == "OPTIONS":
         # Allows GET requests from any origin with the Content-Type
         # header and caches preflight response for an 3600s
@@ -47,12 +56,19 @@ def hello_http(request):
     elif content_type.startswith('multipart/form-data'):
         data = request.form.to_dict()
         for field in data:
+            # fields[field] = data[field]
             print("Processed field: %s" % field)
             print(data[field])
             image_data = re.sub('^data:image/.+;base64,', '', data[field])
             imageBytes = Image.open(BytesIO(base64.b64decode(image_data)))
+            # imageBytes = bytearray(base64.b64decode(data[field]))
             genai.configure(api_key=key)
-            model = genai.GenerativeModel('gemini-pro-vision')
+            model = genai.GenerativeModel(
+            'gemini-pro-vision',
+            generation_config=genai.GenerationConfig(
+                max_output_tokens=2000,
+                temperature=0.1,
+            ))
             response = model.generate_content(["OCR image and Extract event details in vcal format from the image text", imageBytes], stream=True)
             response.resolve()
             print(response.text)
